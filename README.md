@@ -1,5 +1,5 @@
 # Cosmos-Dataloader
-Cosmos-predict2 has a nicely designed dataloader and customized webdatset. I port the dataloader related code into this standalone repo with minimal requirements. So we can use it for other projects without the need to deal with all those dependencies from diffusion and megatron
+[Cosmos-predict2](https://github.com/nvidia-cosmos/cosmos-predict2) has a nicely designed dataloader and customized webdatset. I port the dataloader related code into this standalone repo with minimal requirements. So we can use it for other projects without the need to deal with all those dependencies from diffusion and megatron
 
 ## Table of Contents
 1. [Quick Start](#quick-start)

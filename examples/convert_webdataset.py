@@ -22,7 +22,6 @@ from pathlib import Path
 from typing import Dict, List, Set, Tuple, Optional
 import tempfile
 import os
-import io
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 from multiprocessing import Pool, cpu_count

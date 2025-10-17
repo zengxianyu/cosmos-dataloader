@@ -1,0 +1,113 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cosmos-dataloader"
+version = "0.1.0"
+description = "A standalone dataloader with customized webdataset for ML/AI projects"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Cosmos Team"}
+]
+keywords = ["dataloader", "webdataset", "machine-learning", "computer-vision", "video-processing"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "torch>=2.0.0",
+    "numpy>=1.21.0",
+    "Pillow>=9.0.0",
+    "decord>=0.6.0",
+    "webdataset>=0.2.0",
+    "omegaconf>=2.3.0",
+    "PyYAML>=6.0",
+    "attrs>=22.0.0",
+    "fvcore>=0.1.5",
+    "boto3>=1.26.0",
+    "iopath>=0.1.9",
+    "einops>=0.6.0",
+    "torchvision>=0.15.0",
+    "pandas",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=22.0.0",
+    "flake8>=5.0.0",
+    "mypy>=1.0.0",
+]
+docs = [
+    "sphinx>=5.0.0",
+    "sphinx-rtd-theme>=1.0.0",
+]
+
+[project.scripts]
+cosmos-convert = "examples.convert_webdataset:main"
+
+[project.urls]
+Homepage = "https://github.com/your-org/cosmos-dataloader"
+Repository = "https://github.com/your-org/cosmos-dataloader"
+Documentation = "https://cosmos-dataloader.readthedocs.io/"
+"Bug Tracker" = "https://github.com/your-org/cosmos-dataloader/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cosmos_datasets*"]
+
+[tool.setuptools.package-data]
+cosmos_datasets = ["*.yaml", "*.yml", "*.json"]
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"

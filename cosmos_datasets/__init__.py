@@ -15,32 +15,17 @@
 
 """Cosmos Datasets - A standalone dataset library for machine learning workflows."""
 
-__version__ = "1.0.0"
+__version__ = "0.1.0"
 
-# Import main dataset providers
-from .dataset_provider import get_video_dataset
+# Import main submodules
+from . import webdataset_base
+from . import dataset_utils
 
-from . import s3_support
-
-# Import key classes
-from .webdataset import Dataset
-from .joint_dataloader import IterativeJointDataLoader, RandomJointDataLoader
-from .cached_replay_dataloader import CachedReplayDataLoader
-
-# Import utilities
-from .constants import IMAGE_RES_SIZE_INFO, VIDEO_RES_SIZE_INFO
-from .augmentor_provider import AUGMENTOR_OPTIONS
-
+# Import functions called directly on cosmos_datasets module
 from .s3_support import configure_s3_defaults
 
 __all__ = [
-    "get_video_dataset",
-    "Dataset",
-    "IterativeJointDataLoader",
-    "RandomJointDataLoader", 
-    "CachedReplayDataLoader",
-    "IMAGE_RES_SIZE_INFO",
-    "VIDEO_RES_SIZE_INFO", 
-    "AUGMENTOR_OPTIONS",
+    "webdataset_base",
+    "dataset_utils",
     "configure_s3_defaults",
 ]

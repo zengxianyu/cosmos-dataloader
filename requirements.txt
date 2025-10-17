@@ -1,0 +1,27 @@
+# Python version requirement
+# Requires Python 3.10+ due to union type syntax (Image.Image | None)
+
+# Core ML/AI libraries
+torch>=2.0.0
+numpy>=1.21.0
+Pillow>=9.0.0
+decord>=0.6.0
+
+# WebDataset ecosystem
+webdataset>=0.2.0
+
+# Configuration and utilities
+omegaconf>=2.3.0
+PyYAML>=6.0
+attrs>=22.0.0
+fvcore>=0.1.5
+
+# S3/Cloud storage
+boto3>=1.26.0
+iopath>=0.1.9
+
+# Video processing
+einops>=0.6.0
+torchvision>=0.15.0
+
+pandas

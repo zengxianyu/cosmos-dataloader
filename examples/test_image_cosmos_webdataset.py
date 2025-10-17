@@ -5,29 +5,21 @@ Test cosmos_datasets webdataset with actual image files.
 This creates proper image files and tests image loading with different decoders.
 """
 
-import os
 import sys
-import json
-import tarfile
-import subprocess
-from io import BytesIO
 from pathlib import Path
 import logging
 from PIL import Image
 import numpy as np
 
-# Add the parent directory to sys.path to import cosmos_datasets
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 import cosmos_datasets
 from cosmos_datasets.log import get_logger
 from cosmos_datasets.webdataset import Dataset
 from cosmos_datasets.webdataset_base.dataloader import DataLoader
-from cosmos_datasets.webdataset_base.config.schema import DatasetConfig, DatasetInfo
+from cosmos_datasets.webdataset_base.config.schema import DatasetConfig
 from cosmos_datasets.webdataset_base.distributors.basic import ShardlistBasic
 from cosmos_datasets.webdataset_base.distributors.multi_aspect_ratio import ShardlistMultiAspectRatio
 import cosmos_datasets.webdataset_base.decoders.image as image_decoders
-from examples.dataset_utils import create_image_dataset_with_real_images, create_multi_aspect_ratio_image_dataset
+from cosmos_datasets.dataset_utils import create_image_dataset_with_real_images, create_multi_aspect_ratio_image_dataset
 from webdataset.handlers import warn_and_continue
 from cosmos_datasets.augmentor_provider import get_image_augmentor
 
@@ -177,16 +169,22 @@ def test_multi_aspect_ratio_image_dataset(s3_bucket: str = None, s3_profile: str
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(name)s:%(message)s')
-
-    # Configure S3 defaults
-    cosmos_datasets.configure_s3_defaults(
-        profile_name="wasabi",
-        endpoint_url="https://s3.wasabisys.com", # None for default aws
-        region_name="us-east-1"
-    )
-    
     # Test single aspect ratio first
-    test_image_cosmos_dataset(s3_bucket="test-bucket-img2dataset", s3_profile="wasabi", s3_endpoint_url="https://s3.wasabisys.com")
+    test_image_cosmos_dataset()
     
     # Test multi-aspect ratio
-    test_multi_aspect_ratio_image_dataset(s3_bucket="test-bucket-img2dataset", s3_profile="wasabi", s3_endpoint_url="https://s3.wasabisys.com")
+    test_multi_aspect_ratio_image_dataset()
+
+    # for s3
+    ## Configure S3 defaults
+    #cosmos_datasets.configure_s3_defaults(
+    #    profile_name="wasabi",
+    #    endpoint_url="https://s3.wasabisys.com", # None for default aws
+    #    region_name="us-east-1"
+    #)
+    
+    ## Test single aspect ratio first
+    #test_image_cosmos_dataset(s3_bucket="test-bucket-img2dataset", s3_profile="wasabi", s3_endpoint_url="https://s3.wasabisys.com")
+    
+    ## Test multi-aspect ratio
+    #test_multi_aspect_ratio_image_dataset(s3_bucket="test-bucket-img2dataset", s3_profile="wasabi", s3_endpoint_url="https://s3.wasabisys.com")

@@ -1,5 +1,32 @@
 # Cosmos-Dataloader
-Cosmos-predict2 has a nicely designed dataloader and customized webdatset. I port the dataloader related code into this standalone repo with minimal requirements. So we can use it for other projects without the need to deal with all those dependencies from diffusion and megatron
+[Cosmos-predict2](https://github.com/nvidia-cosmos/cosmos-predict2) has a nicely designed dataloader and customized webdatset. I port the dataloader related code into this standalone repo with minimal requirements. So we can use it for other projects without the need to deal with all those dependencies from diffusion and megatron
+
+
+### Overview
+Cosmos-datasets implements a multiple tar loading system that separates modalities into different tar files while maintaining synchronization across samples. This allows for modular data organization and efficient updates. When adding a new modality or making changes to existing ones, we only need to add a new directory of tar files without the need to re-build the entire datset. 
+
+Conventional WebDataset Format:
+```
+dataset/
+├── 000000.tar  # Contains: 000000.jpg, 000000.txt, 000000.json
+├── 000001.tar  # Contains: 000001.jpg, 000001.txt, 000001.json
+└── ...
+```
+
+Cosmos Datasets Format:
+```
+dataset/
+├── images/
+│   └── part_000/
+│       └── 000.tar  # Contains: 000000.jpg, 000001.jpg, ...
+├── captions/
+│   └── part_000/
+│       └── 000.tar  # Contains: 000000.txt, 000001.txt, ...
+├── metas/
+│   └── part_000/
+│       └── 000.tar  # Contains: 000000.json, 000001.json, ...
+└── wdinfo.json  # Dataset metadata
+```
 
 ## Table of Contents
 1. [Quick Start](#quick-start)
@@ -54,9 +81,6 @@ Demonstrates how to work with image datasets using cosmos-datasets format, inclu
 ```bash
 # Run basic image dataset test
 python examples/test_image_cosmos_webdataset.py
-
-# Test with S3 (optional)
-python examples/test_image_cosmos_webdataset.py --s3-bucket my-bucket --s3-profile my-profile
 ```
 
 ### Example 2: Video Dataset Testing (`test_video_cosmos_webdataset.py`)
@@ -68,12 +92,6 @@ Similar to image example, this shows how to work with video datasets, including 
 ```bash
 # Run basic video dataset test
 python examples/test_video_cosmos_webdataset.py
-
-# Test multi-aspect ratio video dataset
-python examples/test_video_cosmos_webdataset.py --multi-aspect-ratio
-
-# Test with S3 (optional)
-python examples/test_video_cosmos_webdataset.py --s3-bucket my-bucket
 ```
 
 ### Example 3: WebDataset Conversion (`convert_webdataset.py`)
@@ -99,32 +117,6 @@ python examples/convert_webdataset.py \
 ```
 
 ## Multiple Tar Loading Implementation
-
-### Overview
-Cosmos-datasets implements a multiple tar loading system that separates modalities into different tar files while maintaining synchronization across samples. This allows for modular data organization and efficient updates. When adding a new modality or making changes to existing ones, we only need to add a new directory of tar files without the need to re-build the entire datset. 
-
-Conventional WebDataset Format:
-```
-dataset/
-├── 000000.tar  # Contains: 000000.jpg, 000000.txt, 000000.json
-├── 000001.tar  # Contains: 000001.jpg, 000001.txt, 000001.json
-└── ...
-```
-
-Cosmos Datasets Format:
-```
-dataset/
-├── images/
-│   └── part_000/
-│       └── 000.tar  # Contains: 000000.jpg, 000001.jpg, ...
-├── captions/
-│   └── part_000/
-│       └── 000.tar  # Contains: 000000.txt, 000001.txt, ...
-├── metas/
-│   └── part_000/
-│       └── 000.tar  # Contains: 000000.json, 000001.json, ...
-└── wdinfo.json  # Dataset metadata
-```
 
 ### Core Components
 

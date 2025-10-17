@@ -54,9 +54,6 @@ Demonstrates how to work with image datasets using cosmos-datasets format, inclu
 ```bash
 # Run basic image dataset test
 python examples/test_image_cosmos_webdataset.py
-
-# Test with S3 (optional)
-python examples/test_image_cosmos_webdataset.py --s3-bucket my-bucket --s3-profile my-profile
 ```
 
 ### Example 2: Video Dataset Testing (`test_video_cosmos_webdataset.py`)
@@ -68,12 +65,6 @@ Similar to image example, this shows how to work with video datasets, including 
 ```bash
 # Run basic video dataset test
 python examples/test_video_cosmos_webdataset.py
-
-# Test multi-aspect ratio video dataset
-python examples/test_video_cosmos_webdataset.py --multi-aspect-ratio
-
-# Test with S3 (optional)
-python examples/test_video_cosmos_webdataset.py --s3-bucket my-bucket
 ```
 
 ### Example 3: WebDataset Conversion (`convert_webdataset.py`)

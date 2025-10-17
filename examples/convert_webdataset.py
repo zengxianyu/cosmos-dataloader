@@ -495,49 +495,53 @@ def convert_multiple_s3_tars(
     
     logger.info(f"Using {num_processes} processes for conversion")
     
-    # First, discover all available tar files
-    file_info_list = []
-    file_num = start_file
-    found_files = 0
+    # First, discover all available tar files by listing the S3 prefix
+    logger.info("Discovering available tar files...")
     
-    while True:
-        if max_files and found_files >= max_files:
-            break
-            
-        # Construct the input key
-        filename = file_pattern.format(file_num)
-        if input_prefix:
-            # Remove trailing slash from prefix if present, then add filename
-            clean_prefix = input_prefix.rstrip('/')
-            input_key = f"{clean_prefix}/{filename}"
-        else:
-            input_key = filename
+    # Use S3 list_objects_v2 to get all tar files in the prefix
+    try:
+        paginator = s3_client.get_paginator('list_objects_v2')
+        page_iterator = paginator.paginate(
+            Bucket=input_bucket,
+            Prefix=input_prefix.rstrip('/') + '/' if input_prefix else ''
+        )
         
-        # Check if file exists in S3
-        try:
-            s3_client.head_object(Bucket=input_bucket, Key=input_key)
-            # Keep the original filename for output
-            output_tar_name = filename  # Use the original filename like 00000.tar, 00001.tar
-            
+        tar_files = []
+        for page in page_iterator:
+            if 'Contents' in page:
+                for obj in page['Contents']:
+                    key = obj['Key']
+                    filename = key.split('/')[-1]  # Get just the filename
+                    if filename.endswith('.tar') and filename.startswith('00'):
+                        # Extract the number from filename like 00123.tar
+                        try:
+                            file_num = int(filename[:-4])  # Remove .tar and convert to int
+                            tar_files.append((file_num, filename, key))
+                        except ValueError:
+                            continue
+        
+        # Sort by file number
+        tar_files.sort(key=lambda x: x[0])
+        
+        # Apply start_file and max_files limits
+        filtered_files = [f for f in tar_files if f[0] >= start_file]
+        if max_files:
+            filtered_files = filtered_files[:max_files]
+        
+        logger.info(f"Found {len(filtered_files)} tar files to convert (out of {len(tar_files)} total)")
+        
+        if not filtered_files:
+            raise ValueError("No tar files found to convert")
+        
+        # Prepare file info list
+        file_info_list = []
+        for file_num, filename, input_key in filtered_files:
             file_info = (file_num, input_bucket, input_key, output_bucket, output_prefix)
-            file_info_list.append((file_info, output_tar_name))
-            found_files += 1
+            file_info_list.append((file_info, filename))  # Use original filename
             
-        except ClientError as e:
-            if e.response['Error']['Code'] == '404':
-                if found_files == 0:
-                    logger.warning(f"No files found starting from {filename}")
-                else:
-                    logger.info(f"No more files found after {filename}")
-                break
-            else:
-                logger.error(f"Error checking s3://{input_bucket}/{input_key}: {e}")
-                break
-        
-        file_num += 1
-    
-    if not file_info_list:
-        raise ValueError("No tar files found to convert")
+    except Exception as e:
+        logger.error(f"Error discovering files: {e}")
+        raise
     
     logger.info(f"Found {len(file_info_list)} tar files to convert")
     

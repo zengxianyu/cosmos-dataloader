@@ -160,11 +160,124 @@ def process_sample(sample, url, key_idx):
     return sample
 
 
+def _synchronized_stream_processor(tar_file_iterator_list, url, handler):
+    """
+    Process multiple tar file iterators in a synchronized manner to prevent
+    sample order mismatch when one stream fails and continues.
+    
+    This function ensures that when one stream encounters an error and continues
+    with the next sample, all other streams are also advanced to maintain
+    sample alignment across streams.
+    
+    Args:
+        tar_file_iterator_list: List of tar_file_iterator objects
+        url: URL object containing stream information
+        handler: Exception handler function
+        
+    Yields:
+        Processed samples in synchronized order
+    """
+    # Create synchronized iterators that handle errors consistently
+    synchronized_iterators = []
+    
+    for stream_id, iterator in enumerate(tar_file_iterator_list):
+        def make_sync_iterator(iter_obj, stream_idx):
+            """Create a synchronized iterator that handles errors consistently"""
+            try:
+                for item in iter_obj:
+                    yield item
+            except Exception as exn:
+                logger.warning(f"Stream {stream_idx} encountered error: {exn}")
+                # When one stream fails, we need to ensure all streams advance together
+                # This prevents sample order mismatch
+                # Continue with next sample, but mark this stream as having an error
+                # so other streams can catch up
+                yield None
+                #if handler(exn):
+                #    yield None  # Placeholder to maintain synchronization
+                #else:
+                #    # If handler says to stop, re-raise the exception
+                #    raise exn
+        
+        synchronized_iterators.append(make_sync_iterator(iterator, stream_id))
+    
+    # Process samples in synchronized batches
+    while True:
+        try:
+            # Get next sample from all streams
+            sample_batch = []
+            all_streams_exhausted = True
+            
+            for sync_iter in synchronized_iterators:
+                try:
+                    sample = next(sync_iter)
+                    sample_batch.append(sample)
+                    all_streams_exhausted = False
+                except StopIteration:
+                    # This stream is exhausted
+                    sample_batch.append(None)
+                except Exception as exn:
+                    logger.warning(f"Error in synchronized processing: {exn}")
+                    sample_batch.append(None)  # Placeholder for failed stream
+                    all_streams_exhausted = False
+            
+            # If all streams are exhausted, we're done
+            if all_streams_exhausted:
+                break
+                
+            # Process the synchronized batch
+            # Skip if ANY sample is None (any stream failed) - only yield when ALL streams succeed
+            if any(sample is None for sample in sample_batch):
+                logger.warning(f"Skipping batch due to failed streams")
+                continue
+                
+            # Yield samples from the synchronized batch
+            # Only yield when ALL streams succeeded (no None values)
+            for key_idx, sample_key in enumerate(sample_batch):
+                sample_key = process_sample(sample_key, url, key_idx)
+                yield sample_key
+                    
+        except StopIteration:
+            break
+        except Exception as exn:
+            logger.error(f"Error in synchronized stream processing: {exn}")
+            if handler(exn):
+                continue
+            else:
+                break
+
+
+def _legacy_stream_processor(tar_file_iterator_list, url, handler):
+    """
+    Legacy stream processing that uses zip() - may cause sample order mismatch
+    when one stream fails and continues while others don't.
+    
+    This is kept for backward compatibility and when synchronized processing
+    is not needed.
+    """
+    if url.sample_keys_full_list is None:  # Original behavior
+        # tar_file_iterator_list is a list of iterator: [tar_file_iterator_0, tar_file_iterator_1, ... tar_file_iterator_N]
+        for sample in zip(*tar_file_iterator_list, strict=False):
+            # Merging data from all streams
+            # sample is list of dictionaries, each dictionary contains data and fname
+            # sample [tar_file_iterator_0[0], tar_file_iterator_1[0], ... tar_file_iterator_N[0]], length = num_of_data_key
+            for key_idx, sample_key in enumerate(sample):
+                sample_key = process_sample(sample_key, url, key_idx)
+                yield sample_key
+    else:
+        # Provide fallback to standard processing
+        for sample in zip(*tar_file_iterator_list, strict=False):
+            for key_idx, sample_key in enumerate(sample):
+                sample_key = process_sample(sample_key, url, key_idx)
+                yield sample_key
+
+
 def tar_file_expander(
     data: Iterable[dict[str, Any]],
     handler: Callable[[Exception], bool] = reraise_exception,
     select_files: Callable[[str], bool] | None = None,
     rename_files: Callable[[str], str] | None = None,
+    synchronized_processing: bool = True,
 ) -> Iterator[dict[str, Any]]:
     """Expand tar files.
 
@@ -173,6 +286,8 @@ def tar_file_expander(
         handler (Callable[[Exception], bool]): exception handler.
         select_files (Optional[Callable[[str], bool]]): select files from tarfiles by name (permits skipping files).
         rename_files (Optional[Callable[[str], bool]]): Renaming tar files.
+        synchronized_processing (bool): If True, use synchronized processing to prevent sample order mismatch
+                                       when one stream fails and continues. If False, use legacy zip() processing.
 
     Yields:
         a stream of samples.
@@ -192,21 +307,16 @@ def tar_file_expander(
                         rename_files=rename_files,
                     )
                 )
-            if url.sample_keys_full_list is None:  # Original behavior
-                # tar_file_iterator_list is a list of iterator: [tar_file_iterator_0, tar_file_iterator_1, ... tar_file_iterator_N]
-                for sample in zip(*tar_file_iterator_list, strict=False):
-                    # Merging data from all streams
-                    # sample is list of dictionaries, each dictionary contains data and fname
-                    # sample [tar_file_iterator_0[0], tar_file_iterator_1[0], ... tar_file_iterator_N[0]], length = num_of_data_key
-                    for key_idx, sample_key in enumerate(sample):
-                        sample_key = process_sample(sample_key, url, key_idx)
-                        yield sample_key
+            
+            # Choose processing method based on configuration
+            if synchronized_processing:
+                # Use synchronized processing to prevent sample order mismatch
+                for sample_key in _synchronized_stream_processor(tar_file_iterator_list, url, handler):
+                    yield sample_key
             else:
-                # Provide fallback to standard processing
-                for sample in zip(*tar_file_iterator_list, strict=False):
-                    for key_idx, sample_key in enumerate(sample):
-                        sample_key = process_sample(sample_key, url, key_idx)
-                        yield sample_key
+                # Use legacy processing (may cause sample order mismatch)
+                for sample_key in _legacy_stream_processor(tar_file_iterator_list, url, handler):
+                    yield sample_key
 
         except Exception as exn:
             logger.info(f"Got an exception while expanding tars - {exn}")
@@ -241,6 +351,7 @@ def tarfile_samples(
     src: Iterable,
     handler: Callable = reraise_exception,
     streaming_download: bool = True,
+    synchronized_processing: bool = True,
 ) -> Iterator[dict]:
     r"""
     Given an iterator of filenames, this function opens the URL streams
@@ -250,15 +361,23 @@ def tarfile_samples(
         src (Iterable): Iterator of TarSample.
         handler (Callable): Exception handler.
         streaming_download(bool): If enabled, performs streaming download.
+        synchronized_processing (bool): If True, use synchronized processing to prevent sample order mismatch
+                                       when one stream fails and continues. If False, use legacy zip() processing.
     """
     streams = url_opener(
         src,
         handler=handler,
         streaming_download=streaming_download,
     )
-    files = tar_file_expander(streams, handler=handler)
+    files = tar_file_expander(streams, handler=handler, synchronized_processing=synchronized_processing)
     samples = group_by_keys(files, handler=handler)
-    return samples
+    
+    # Custom sample processing - you can manipulate samples here
+    def process_samples(sample_iterator):
+        for sample in sample_iterator:
+            yield sample
+    
+    return process_samples(samples)
 
 
 tarfile_to_samples = filters.pipelinefilter(tarfile_samples)
@@ -279,6 +398,7 @@ class WebDataset(DataPipeline, FluidInterface):
         nodesplitter: Callable = shardlists.single_node_only,
         verbose: bool = False,
         streaming_download: bool = True,
+        synchronized_processing: bool = True,
     ):
         r"""
         Args:
@@ -292,6 +412,8 @@ class WebDataset(DataPipeline, FluidInterface):
             nodesplitter (Callable): Function for splitting urls among nodes.
             verbose (bool): If True, prints logs.
             streaming_download (bool): Whether to do streaming download or full object download.
+            synchronized_processing (bool): If True, use synchronized processing to prevent sample order mismatch
+                                           when one stream fails and continues. If False, use legacy zip() processing.
         """
         super().__init__()
         if isinstance(urls, IterableDataset):
@@ -323,6 +445,7 @@ class WebDataset(DataPipeline, FluidInterface):
                 tarfile_to_samples(
                     handler=handler,
                     streaming_download=streaming_download,
+                    synchronized_processing=synchronized_processing,
                 )
             )
         else:

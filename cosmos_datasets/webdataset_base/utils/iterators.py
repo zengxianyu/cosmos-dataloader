@@ -215,7 +215,8 @@ def _synchronized_stream_processor(tar_file_iterator_list, url, handler):
                     all_streams_exhausted = False
                 except StopIteration:
                     # This stream is exhausted
-                    sample_batch.append(None)
+                    all_streams_exhausted = True
+                    break
                 except Exception as exn:
                     logger.warning(f"Error in synchronized processing: {exn}")
                     sample_batch.append(None)  # Placeholder for failed stream

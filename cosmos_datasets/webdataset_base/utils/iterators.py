@@ -152,7 +152,8 @@ def process_sample(sample, url, key_idx):
     # Handle the case where data_key has "/"
     data_key = data_key.replace("/", "_")
     # Edit the fname to include the data_key
-    prefix, suffix = sample["fname"].split(".")  # {sample_key}.{suffix} e.g. "id_1410095.json"
+    fname_list = sample["fname"].split(".")
+    prefix, suffix = ".".join(fname_list[:-1]), fname_list[-1]  # {sample_key}.{suffix} e.g. "id_1410095.json"
 
     # e.g. "id_1410095.caption_ai_from_image.json"
     sample["fname"] = f"{prefix}.{data_key}.{suffix}"

@@ -91,6 +91,10 @@ class VideoParsing(Augmentor):
         for chunk_index, option in options:  # noqa: B007
             start_frame = option["start_frame"]
             end_frame = option["end_frame"]
+            if start_frame == -1:
+                start_frame = random.randint(0, int(video_info["n_orig_video_frames"] - self.min_duration * video_info["fps"]))
+            if end_frame == -1:
+                end_frame = random.randint(int(start_frame + self.min_duration * video_info["fps"]), int(video_info["n_orig_video_frames"]))
             if (end_frame - start_frame) < self.min_duration * video_info["fps"]:
                 continue
 
